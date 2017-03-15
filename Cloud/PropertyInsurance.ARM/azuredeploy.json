@@ -1,0 +1,286 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "siteName": {
+      "type": "string",
+      "defaultValue": "PropertyInsurance",
+      "metadata": {
+        "description": "The name of the web client app that you wish to create."
+      }
+    },
+    "hostingPlanName": {
+      "type": "string",
+      "metadata": {
+        "description": "The hosting service plan name that you wish to create."
+      },
+      "defaultValue": "propertyinsurance"
+    },
+    "sqlserverAdminLogin": {
+      "type": "string",
+      "minLength": 1
+    },
+    "sqlserverAdminLoginPassword": {
+      "type": "securestring"
+    }
+  },
+  "variables": {
+    "location": "[resourceGroup().location]",
+    "lowerSiteName": "[toLower(parameters('siteName'))]",
+    "nameSuffix": "[substring(uniqueString(resourceGroup().id), 0, 6)]",
+    "notificationHubName": "[concat(variables('lowerSiteName'), variables('nameSuffix'))]",
+    "notificationHubNamespaceName": "[concat(variables('notificationHubName'), '-ns')]",
+    "storageAccountName": "[concat(variables('lowerSiteName'), variables('nameSuffix'))]",
+    "sqlServerName": "[concat(variables('lowerSiteName'), variables('nameSuffix'), '-dbserver')]",
+    "functionAppName": "[concat(variables('lowerSiteName'), variables('nameSuffix'), '-function')]",
+    "webSiteName": "[concat(variables('lowerSiteName'), variables('nameSuffix'))]",
+    "apiSiteName": "[concat(variables('lowerSiteName'), variables('nameSuffix'), '-api')]",
+    "claimDetailsPageBaseUrl": "[concat('https://', variables('webSiteName'), '.azurewebsites.net/claim/detail')]",
+    "mtcsJsonUrl": "[concat('https://', variables('storageAccountName'), '.blob.core.windows.net/public/mtcs.json')]",
+
+    "sqldatabaseCollation": "SQL_Latin1_General_CP1_CI_AS",
+    "sqldatabaseEdition": "Basic",
+    "sqldatabaseRequestedServiceObjectiveName": "Basic",
+    "workflowsApprovePicturename": "[concat(parameters('siteName'), 'ApprovePicture')]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.NotificationHubs/namespaces",
+      "sku": {
+        "name": "Free"
+      },
+      "kind": "NotificationHub",
+      "name": "[variables('notificationHubNamespaceName')]",
+      "apiVersion": "2014-09-01",
+      "location": "[resourceGroup().location]",
+      "tags": {},
+      "properties": {
+        "region": "[resourceGroup().location]",
+        "namespaceType": "NotificationHub"
+      },
+      "resources": [
+        {
+          "type": "notificationHubs",
+          "name": "[variables('notificationHubName')]",
+          "apiVersion": "2014-09-01",
+          "location": "[resourceGroup().location]",
+          "properties": {
+            "authorizationRules": []
+          },
+          "dependsOn": [
+            "[resourceId('Microsoft.NotificationHubs/namespaces', variables('notificationHubNamespaceName'))]"
+          ]
+        }
+      ]
+    },
+
+    {
+      "type": "Microsoft.Storage/storageAccounts",
+      "sku": {
+        "name": "Standard_RAGRS",
+        "tier": "Standard"
+      },
+      "kind": "Storage",
+      "name": "[variables('storageAccountName')]",
+      "apiVersion": "2016-01-01",
+      "location": "[resourceGroup().location]",
+      "tags": {},
+      "properties": {},
+      "dependsOn": []
+    },
+
+    {
+      "apiVersion": "2015-08-01",
+      "type": "Microsoft.Web/serverfarms",
+      "sku": {
+        "name": "B1",
+        "tier": "Basic",
+        "size": "B1",
+        "family": "B",
+        "capacity": 1
+      },
+      "kind": "app",
+      "name": "[parameters('hostingPlanName')]",
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "name": "[parameters('hostingPlanName')]",
+        "numberOfWorkers": 1
+      },
+      "dependsOn": []
+    },
+
+    {
+      "apiVersion": "2015-08-01",
+      "type": "Microsoft.Web/serverfarms",
+      "sku": {
+        "name": "B1",
+        "tier": "Basic",
+        "size": "B1",
+        "family": "B",
+        "capacity": 1
+      },
+      "kind": "functionapp",
+      "name": "[concat(parameters('hostingPlanName'), 'functionapp')]",
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "name": "[concat(parameters('hostingPlanName'), 'functionapp')]",
+        "numberOfWorkers": 1
+      },
+      "dependsOn": []
+    },
+
+    {
+      "name": "[variables('sqlserverName')]",
+      "type": "Microsoft.Sql/servers",
+      "location": "[resourceGroup().location]",
+      "apiVersion": "2014-04-01-preview",
+      "dependsOn": [],
+      "tags": {
+        "displayName": "sqlserver"
+      },
+      "properties": {
+        "administratorLogin": "[parameters('sqlserverAdminLogin')]",
+        "administratorLoginPassword": "[parameters('sqlserverAdminLoginPassword')]"
+      },
+      "resources": [
+        {
+          "name": "AllowAllWindowsAzureIps",
+          "type": "firewallrules",
+          "location": "[resourceGroup().location]",
+          "apiVersion": "2014-04-01-preview",
+          "dependsOn": [
+            "[resourceId('Microsoft.Sql/servers', variables('sqlServerName'))]"
+          ],
+          "properties": {
+            "startIpAddress": "0.0.0.0",
+            "endIpAddress": "0.0.0.0"
+          }
+        },
+        {
+          "name": "PropertyInsurance",
+          "type": "databases",
+          "location": "[resourceGroup().location]",
+          "apiVersion": "2014-04-01-preview",
+          "dependsOn": [
+            "[resourceId('Microsoft.Sql/servers', variables('sqlServerName'))]"
+          ],
+          "tags": {
+            "displayName": "sqldatabase"
+          },
+          "properties": {
+            "collation": "[variables('sqldatabaseCollation')]",
+            "edition": "[variables('sqldatabaseEdition')]",
+            "maxSizeBytes": "1073741824",
+            "requestedServiceObjectiveName": "[variables('sqldatabaseRequestedServiceObjectiveName')]"
+          }
+        }
+      ]
+    },
+
+    {
+      "type": "Microsoft.Web/sites",
+      "kind": "functionapp",
+      "name": "[variables('functionAppName')]",
+      "apiVersion": "2015-08-01",
+      "location": "[variables('location')]",
+      "properties": {
+        "name": "[variables('functionAppName')]",
+        "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', concat(parameters('hostingPlanName'), 'functionapp'))]",
+        "siteConfig": {
+          "AlwaysOn": true
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/serverFarms/', concat(parameters('hostingPlanName'), 'functionapp'))]",
+        "[resourceId('Microsoft.Storage/storageAccounts/', variables('storageAccountName'))]",
+        "[resourceId('Microsoft.NotificationHubs/namespaces/', variables('notificationHubNamespaceName'))]"
+      ],
+      "resources": [
+        {
+          "name": "appsettings",
+          "type": "config",
+          "apiVersion": "2015-08-01",
+          "dependsOn": [
+            "[resourceId('Microsoft.Web/sites', variables('functionAppName'))]",
+            "[resourceId('Microsoft.Storage/storageAccounts/', variables('storageAccountName'))]",
+            "[resourceId('Microsoft.NotificationHubs/namespaces/notificationHubs/', variables('notificationHubNamespaceName'), variables('notificationHubName'))]"
+          ],
+          "properties": {
+            "AzureWebJobsDashboard": "[concat('DefaultEndpointsProtocol=https;AccountName=',variables('storageAccountName'),';AccountKey=',listkeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), '2015-05-01-preview').key1,';')]",
+            "AzureWebJobsStorage": "[concat('DefaultEndpointsProtocol=https;AccountName=',variables('storageAccountName'),';AccountKey=',listkeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), '2015-05-01-preview').key1,';')]",
+            "FUNCTIONS_EXTENSION_VERSION": "~1",
+            "WEBSITE_NODE_DEFAULT_VERSION": "6.5.0",
+            "MS_NotificationHubName": "[variables('notificationHubName')]",
+            "MS_NotificationHubConnectionString": "[listkeys(resourceId('Microsoft.NotificationHubs/namespaces/notificationHubs/authorizationRules', variables('notificationHubNamespaceName'), variables('notificationHubName'), 'DefaultFullSharedAccessSignature'), '2014-09-01').primaryConnectionString]",
+            "WEBSITE_CONTENTAZUREFILECONNECTIONSTRING": "[concat('DefaultEndpointsProtocol=https;AccountName=',variables('storageAccountName'),';AccountKey=',listkeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), '2015-05-01-preview').key1,';')]",
+            "WEBSITE_CONTENTSHARE": "[variables('functionAppName')]"
+          }
+        }
+      ]
+    },
+
+    {
+      "type": "Microsoft.Web/sites",
+      "name": "[variables('apiSiteName')]",
+      "apiVersion": "2015-08-01",
+      "location": "[variables('location')]",
+      "properties": {
+        "name": "[variables('apiSiteName')]",
+        "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', parameters('hostingPlanName'))]"
+      },
+      "resources": [
+        {
+          "apiVersion": "2015-08-01",
+          "type": "config",
+          "name": "appsettings",
+          "dependsOn": [
+            "[resourceId('Microsoft.Web/sites/', variables('apiSiteName'))]",
+            "[resourceId('Microsoft.Storage/storageAccounts/', variables('storageAccountName'))]",
+            "[resourceId('Microsoft.NotificationHubs/namespaces/notificationHubs/', variables('notificationHubNamespaceName'), variables('notificationHubName'))]"
+          ],
+          "properties": {
+            "MS_AzureStorageAccountConnectionString": "[concat('DefaultEndpointsProtocol=https;AccountName=',variables('storageAccountName'),';AccountKey=',listkeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), '2015-05-01-preview').key1,';')]",
+            "MS_NotificationHubName": "[variables('notificationHubName')]",
+            "MS_NotificationHubConnectionString": "[listkeys(resourceId('Microsoft.NotificationHubs/namespaces/notificationHubs/authorizationRules', variables('notificationHubNamespaceName'), variables('notificationHubName'), 'DefaultFullSharedAccessSignature'), '2014-09-01').primaryConnectionString]",
+            "mtcsjsonUrl": "[variables('mtcsJsonUrl')]",
+            "claimDetailsPageUrl": "[variables('claimDetailsPageBaseUrl')]"
+          }
+        }
+      ],
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/serverfarms', parameters('hostingPlanName'))]",
+        "[resourceId('Microsoft.Storage/storageAccounts/', variables('storageAccountName'))]"
+      ]
+    },
+
+    {
+      "type": "Microsoft.Web/sites",
+      "name": "[variables('webSiteName')]",
+      "apiVersion": "2015-08-01",
+      "location": "[variables('location')]",
+      "properties": {
+        "name": "[variables('webSiteName')]",
+        "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', parameters('hostingPlanName'))]"
+      },
+      "resources": [
+        {
+          "apiVersion": "2015-08-01",
+          "type": "config",
+          "name": "appsettings",
+          "dependsOn": [
+            "[resourceId('Microsoft.Web/sites/', variables('webSiteName'))]",
+            "[resourceId('Microsoft.Storage/storageAccounts/', variables('storageAccountName'))]"
+          ],
+          "properties": {
+            "AzureStorageAccountConnectionString": "[concat('DefaultEndpointsProtocol=https;AccountName=',variables('storageAccountName'),';AccountKey=',listkeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), '2015-05-01-preview').key1,';')]"
+          }
+        }
+      ],
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/serverfarms', parameters('hostingPlanName'))]",
+        "[resourceId('Microsoft.Storage/storageAccounts/', variables('storageAccountName'))]"
+      ]
+    }
+  ],
+  "outputs": {}
+}
