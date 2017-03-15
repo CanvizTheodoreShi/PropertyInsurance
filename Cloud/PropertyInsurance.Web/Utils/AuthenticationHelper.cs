@@ -49,5 +49,10 @@ namespace PropertyInsurance.Web.Utils
             HttpContext httpContext = HttpContext.Current;
             httpContext.Response.Redirect("~/home/index");
         }
+
+        public static Uri GetWebRootUrl()
+        {
+            return new Uri(HttpContext.Current.Request.Url.GetLeftPart(UriPartial.Path));
+        }
     }
 }

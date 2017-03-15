@@ -238,6 +238,8 @@
     <Content Include="Content\images\claim-image-example.png" />
     <Content Include="Content\images\claimlist-map.png" />
     <Content Include="Content\images\Contoso-Insurance-Info-Icon.svg" />
+    <Content Include="Content\images\Contoso-Insurance-Kitchen-Flooding-Image.jpg" />
+    <Content Include="Content\images\Contoso-Insurance-Map-Image_DETAIL-VIEW-2.png" />
     <Content Include="Content\images\Contoso-Insurance-Map-Image_DETAIL-VIEW.png" />
     <Content Include="Content\images\Contoso-Insurance-Map-Image_REGIONAL-VIEW.png" />
     <Content Include="Content\images\Contoso-Insurance-Misc-Icons-ELLIPSIS.svg" />
@@ -271,6 +273,7 @@
     <Content Include="fonts\Karla-BoldItalic.ttf" />
     <Content Include="fonts\Karla-Italic.ttf" />
     <Content Include="fonts\Karla-Regular.ttf" />
+    <Content Include="deploy.cmd" />
     <None Include="Properties\PublishProfiles\PropertyInsurance - Web Deploy.pubxml" />
     <None Include="Scripts\jquery-1.10.2.intellisense.js" />
     <Content Include="Scripts\claim.js" />

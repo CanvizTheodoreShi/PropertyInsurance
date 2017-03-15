@@ -22,10 +22,9 @@ namespace PropertyInsurance.Web
         private static string clientId = ConfigurationManager.AppSettings["ida:ClientId"];
         private static string appKey = ConfigurationManager.AppSettings["ida:ClientSecret"];
         private static string aadInstance = ConfigurationManager.AppSettings["ida:AADInstance"];
-        private static string tenantId = ConfigurationManager.AppSettings["ida:TenantId"];
-        private static string postLogoutRedirectUri = ConfigurationManager.AppSettings["ida:PostLogoutRedirectUri"];
+        private static string domain = ConfigurationManager.AppSettings["ida:Domain"];
 
-        public static readonly string Authority = aadInstance + tenantId;
+        public static readonly string Authority = aadInstance + domain;
 
         // This is the resource ID of the AAD Graph API.  We'll need this to request a token to call the Graph API.
         string graphResourceId = "https://graph.windows.net";
@@ -43,7 +42,7 @@ namespace PropertyInsurance.Web
                 {
                     ClientId = clientId,
                     Authority = Authority,
-                    PostLogoutRedirectUri = postLogoutRedirectUri,
+                    PostLogoutRedirectUri = AuthenticationHelper.GetWebRootUrl().ToString(),
 
                     Notifications = new OpenIdConnectAuthenticationNotifications()
                     {

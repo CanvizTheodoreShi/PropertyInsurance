@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Configuration;
 using System.Linq;
+using System.Security.Claims;
 using System.Web;
 
 namespace PropertyInsurance.Web.Utils
@@ -10,7 +11,10 @@ namespace PropertyInsurance.Web.Utils
     {
         public static readonly string AADClientId = ConfigurationManager.AppSettings["ida:ClientId"];
         public static readonly string AADClientSecret = ConfigurationManager.AppSettings["ida:ClientSecret"];
-        public static readonly string AADTenantId = ConfigurationManager.AppSettings["ida:TenantId"];
+        public static string AADTenantId
+        {
+            get { return ClaimsPrincipal.Current.FindFirst("http://schemas.microsoft.com/identity/claims/tenantid").Value; }
+        }
 
         public static readonly string ClaimApproverUrl = ConfigurationManager.AppSettings["ClaimApproverUrl"];
 
@@ -19,7 +23,10 @@ namespace PropertyInsurance.Web.Utils
         public static string ResourceUrl = ConfigurationManager.AppSettings["ida:GraphUrl"];
         public const string GraphResourceRootUrl = "https://graph.microsoft.com/";
         public const string GraphResourceAADRootUrl = "https://graph.microsoft.net/";
-        public static string ConsentRedirectUrl = ConfigurationManager.AppSettings["ConsentRedirectUrl"];
+        public static string ConsentRedirectUrl
+        {
+            get { return AuthenticationHelper.GetWebRootUrl().ToString(); }
+        }
 
         public static readonly string BingMapKey = ConfigurationManager.AppSettings["BingMapKey"];
 
